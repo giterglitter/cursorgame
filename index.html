@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة الإيموجي: أشكال مؤشر الفأرة</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #E3F2FD;
+        }
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto auto 1fr auto auto;
+            gap: 10px;
+            height: 100vh;
+            width: 90%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #1565C0;
+            margin: 0;
+            font-size: 2em;
+            grid-column: 1 / -1;
+        }
+        .timer {
+            grid-column: 2;
+            justify-self: end;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: conic-gradient(#4CAF50 360deg, #E0E0E0 0deg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .target-emojis {
+            grid-column: 1 / -1;
+            background-color: #F5F5F5;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+        .emojis {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .emoji-button {
+            background-color: white;
+            border: 3px solid #E0E0E0;
+            border-radius: 15px;
+            padding: 10px;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .emoji-button:hover {
+            transform: scale(1.05);
+        }
+        .emoji-button.selected {
+            border-color: #4CAF50;
+            background-color: #E8F5E9;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .selected-emojis, .selected-words {
+            grid-column: 1 / -1;
+            background-color: #F5F5F5;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+        .check-button {
+            grid-column: 1 / -1;
+            background-color: #FFC107;
+            color: #1565C0;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .check-button:hover {
+            background-color: #FFD54F;
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            animation: popIn 0.5s;
+        }
+        @keyframes popIn {
+            from { transform: translate(-50%, -50%) scale(0); }
+            to { transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>لعبة الإيموجي</h1>
+        <div class="timer" id="timer">60</div>
+        <div class="target-emojis">
+            <p style="margin: 0; font-size: 18px;">الإيموجيات المطلوبة:</p>
+            <p style="font-size: 36px; margin: 10px 0;">🔠 📊 🖱️</p>
+        </div>
+        <div class="emojis" id="emojiButtons"></div>
+        <div class="selected-emojis">
+            <p style="margin: 0; font-size: 18px;">اختياراتك:</p>
+            <p id="selectedEmojis" style="font-size: 36px; margin: 10px 0;">لم تختر بعد</p>
+        </div>
+        <div class="selected-words">
+            <p style="margin: 0; font-size: 18px;">الكلمات المختارة:</p>
+            <p id="selectedWords" style="font-size: 24px; margin: 10px 0;">-</p>
+        </div>
+        <button class="check-button" onclick="checkAnswer()">تحقق من الإجابة</button>
+    </div>
+    <div id="popup" class="popup">
+        <h2 style="font-size: 28px; margin-top: 0;">أحسنت!</h2>
+        <p style="font-size: 24px;">لقد اخترت الإيموجيات الصحيحة</p>
+        <h3 style="font-size: 28px;">عنوان الدرس: أشكال مؤشر الفأرة</h3>
+    </div>
+
+    <script>
+        const emojiData = [
+            { emoji: '💻', word: 'حاسوب' },
+            { emoji: '🔠', word: 'أشكال' },
+            { emoji: '📊', word: 'مؤشر' },
+            { emoji: '🖱️', word: 'فأرة' },
+            { emoji: '🎨', word: 'تصميم' },
+            { emoji: '👆', word: 'إشارة' },
+            { emoji: '⌨️', word: 'لوحة مفاتيح' },
+            { emoji: '🖥️', word: 'شاشة' }
+        ];
+        const targetEmojis = ['🔠', '📊', '🖱️'];
+        let selectedEmojis = [];
+        let selectedWords = [];
+        let timeLeft = 60;
+        let timerInterval;
+
+        function createEmojiButtons() {
+            const container = document.getElementById('emojiButtons');
+            emojiData.forEach(({ emoji, word }) => {
+                const button = document.createElement('button');
+                button.className = 'emoji-button';
+                button.innerHTML = `${emoji}<br><small>${word}</small>`;
+                button.onclick = () => toggleEmoji(emoji, word, button);
+                container.appendChild(button);
+            });
+        }
+
+        function toggleEmoji(emoji, word, button) {
+            const index = selectedEmojis.indexOf(emoji);
+            if (index > -1) {
+                selectedEmojis.splice(index, 1);
+                selectedWords.splice(index, 1);
+                button.classList.remove('selected');
+            } else if (selectedEmojis.length < 3) {
+                selectedEmojis.push(emoji);
+                selectedWords.push(word);
+                button.classList.add('selected');
+            }
+            updateSelectedEmojis();
+            updateSelectedWords();
+        }
+
+        function updateSelectedEmojis() {
+            const container = document.getElementById('selectedEmojis');
+            container.textContent = selectedEmojis.length > 0 ? selectedEmojis.join(' ') : 'لم تختر بعد';
+        }
+
+        function updateSelectedWords() {
+            const container = document.getElementById('selectedWords');
+            container.textContent = selectedWords.length > 0 ? selectedWords.join(' - ') : '-';
+        }
+
+        function checkAnswer() {
+            const isCorrect = selectedEmojis.length === 3 && 
+                              selectedEmojis.every((emoji, index) => emoji === targetEmojis[index]);
+            if (isCorrect) {
+                document.getElementById('popup').style.display = 'block';
+                clearInterval(timerInterval);
+            } else {
+                alert('حاول مرة أخرى!');
+            }
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            const timerElement = document.getElementById('timer');
+            timerElement.textContent = timeLeft;
+            timerElement.style.background = `conic-gradient(#4CAF50 ${360 - (timeLeft/60*360)}deg, #E0E0E0 0deg)`;
+            if (timeLeft === 0) {
+                clearInterval(timerInterval);
+                alert('انتهى الوقت! حاول مرة أخرى.');
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            selectedEmojis = [];
+            selectedWords = [];
+            updateSelectedEmojis();
+            updateSelectedWords();
+            const buttons = document.querySelectorAll('.emoji-button');
+            buttons.forEach(button => button.classList.remove('selected'));
+            document.getElementById('popup').style.display = 'none';
+            timeLeft = 60;
+            startTimer();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        createEmojiButtons();
+        startTimer();
+    </script>
+</body>
+</html>
